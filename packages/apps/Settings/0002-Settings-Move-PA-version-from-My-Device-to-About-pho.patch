@@ -1,0 +1,63 @@
+From a7ca2cef94caa460384356a46f25e61b31476183 Mon Sep 17 00:00:00 2001
+From: Jprimero15 <jprimero15@aospa.co>
+Date: Wed, 26 Jul 2023 22:53:27 +0000
+Subject: [PATCH 2/9] Settings: Move PA version from My Device to About
+ phone->Android version
+
+* Most people are taking screenshots of this section in About phone' so it's better to move it here. This way, we will always know it's the PA ROM.
+* We also don't want to show our email on screenshots.
+
+Change-Id: I5bfb3edf7b4c695265122c4e23b8f89d2c34f3ca
+Signed-off-by: Jprimero15 <jprimero15@aospa.co>
+Signed-off-by: chrisl7 <wandersonrodriguesf1@gmail.com>
+---
+ res/xml/firmware_version.xml |  8 ++++++++
+ res/xml/my_device_info.xml   | 10 +---------
+ 2 files changed, 9 insertions(+), 9 deletions(-)
+
+diff --git a/res/xml/firmware_version.xml b/res/xml/firmware_version.xml
+index a64221fb6d5..d4ae77300f3 100644
+--- a/res/xml/firmware_version.xml
++++ b/res/xml/firmware_version.xml
+@@ -30,6 +30,14 @@
+         settings:searchable="false"
+         settings:controller="com.android.settings.deviceinfo.firmwareversion.FirmwareVersionDetailPreferenceController"/>
+ 
++    <!-- Paranoid Android version -->
++    <Preference
++        android:key="aospa_version"
++        android:title="@string/aospa_version"
++        android:summary="@string/summary_placeholder"
++        settings:enableCopying="true"
++        settings:controller="com.android.settings.deviceinfo.firmwareversion.ParanoidAndroidVersionPreferenceController"/>
++
+     <!-- Security patch -->
+     <Preference
+         android:key="security_key"
+diff --git a/res/xml/my_device_info.xml b/res/xml/my_device_info.xml
+index 8c2e54e3ab8..b7e59846809 100644
+--- a/res/xml/my_device_info.xml
++++ b/res/xml/my_device_info.xml
+@@ -51,18 +51,10 @@
+             android:fragment="com.android.settings.deviceinfo.firmwareversion.FirmwareVersionSettings"
+             settings:controller="com.android.settings.deviceinfo.firmwareversion.FirmwareVersionPreferenceController"/>
+ 
+-        <!-- Paranoid Android version -->
+-        <Preference
+-        android:key="aospa_version"
+-            android:order="4"
+-            android:title="@string/aospa_version"
+-            android:summary="@string/summary_placeholder"
+-            settings:controller="com.android.settings.deviceinfo.firmwareversion.ParanoidAndroidVersionPreferenceController"/>
+-
+         <!-- Account name -->
+         <Preference
+         android:key="branded_account"
+-            android:order="5"
++            android:order="4"
+             android:title="@string/my_device_info_account_preference_title"
+             android:summary="@string/summary_placeholder"
+             settings:enableCopying="true"
+-- 
+2.45.2
+

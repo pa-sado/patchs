@@ -1,0 +1,221 @@
+From ede217798d8423722abac6093277e04ec3b6e697 Mon Sep 17 00:00:00 2001
+From: Col_or <color597@outlook.com>
+Date: Tue, 18 Jul 2023 07:16:07 +0000
+Subject: [PATCH 06/21] SystemUI: QSAnimator: Optimize quick settings expand
+ animation
+
+Change-Id: I877e61e2688cb2cfed0b0d763f01f95ca00c3f56
+Signed-off-by: Col_or <color597@outlook.com>
+---
+ .../com/android/systemui/qs/QSAnimator.java   | 158 ++++++++++--------
+ 1 file changed, 84 insertions(+), 74 deletions(-)
+
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QSAnimator.java b/packages/SystemUI/src/com/android/systemui/qs/QSAnimator.java
+index ff7512100ccc..d268c88507a9 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QSAnimator.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QSAnimator.java
+@@ -319,7 +319,8 @@ public class QSAnimator implements QSHost.Callback, PagedTileLayout.PageListener
+                 View view = mQs.getView();
+ 
+                 // This case: less tiles to animate in small displays.
+-                if (count < mQuickQSPanelController.getTileLayout().getNumVisibleTiles()) {
++                int numVisibleTiles = mQuickQSPanelController.getTileLayout().getNumVisibleTiles();
++                if (count < numVisibleTiles) {
+                     // Quick tiles.
+                     QSTileView quickTileView = mQuickQSPanelController.getTileView(tile);
+                     if (quickTileView == null) continue;
+@@ -328,77 +329,88 @@ public class QSAnimator implements QSHost.Callback, PagedTileLayout.PageListener
+                     getRelativePosition(mTmpLoc2, tileView, view);
+                     int yOffset = mTmpLoc2[1] - mTmpLoc1[1];
+                     int xOffset = mTmpLoc2[0] - mTmpLoc1[0];
++                    if (count == numVisibleTiles - 1) {
++                        QSTileView qsTileView =
++                                mQsPanelController.getTileView(new ArrayList<>(tiles).get(count - 1));
++                        getRelativePosition(mTmpLoc2, qsTileView, view);
++                        yOffset = mTmpLoc2[1] - mTmpLoc1[1];
++
++                        translationXBuilder.addFloat(quickTileView, "translationX", 0, -xOffset);
++                        translationYBuilder.addFloat(quickTileView, "translationY", 0, yOffset);
++
++                        mAllViews.add(quickTileView);
++                    } else {
++                        // Offset the translation animation on the views
++                        // (that goes from 0 to getOffsetTranslation)
++                        qqsTranslationYBuilder.addFloat(quickTileView, "translationY", 0, yOffset);
++                        translationYBuilder.addFloat(tileView, "translationY", -yOffset, 0);
++
++                        translationXBuilder.addFloat(quickTileView, "translationX", 0, xOffset);
++                        translationXBuilder.addFloat(tileView, "translationX", -xOffset, 0);
++
++                        if (mQQSTileHeightAnimator == null) {
++                            mQQSTileHeightAnimator = new HeightExpansionAnimator(this,
++                                    quickTileView.getMeasuredHeight(), tileView.getMeasuredHeight());
++                            mLastQQSTileHeight = quickTileView.getMeasuredHeight();
++                        }
+ 
+-                    // Offset the translation animation on the views
+-                    // (that goes from 0 to getOffsetTranslation)
+-                    qqsTranslationYBuilder.addFloat(quickTileView, "translationY", 0, yOffset);
+-                    translationYBuilder.addFloat(tileView, "translationY", -yOffset, 0);
+-
+-                    translationXBuilder.addFloat(quickTileView, "translationX", 0, xOffset);
+-                    translationXBuilder.addFloat(tileView, "translationX", -xOffset, 0);
+-
+-                    if (mQQSTileHeightAnimator == null) {
+-                        mQQSTileHeightAnimator = new HeightExpansionAnimator(this,
+-                                quickTileView.getMeasuredHeight(), tileView.getMeasuredHeight());
+-                        mLastQQSTileHeight = quickTileView.getMeasuredHeight();
++                        mQQSTileHeightAnimator.addView(quickTileView);
++
++                        // Icons
++                        translateContent(
++                                quickTileView.getIcon(),
++                                tileView.getIcon(),
++                                view,
++                                xOffset,
++                                yOffset,
++                                mTmpLoc1,
++                                translationXBuilder,
++                                translationYBuilder,
++                                qqsTranslationYBuilder
++                        );
++
++                        // Label containers
++                        translateContent(
++                                quickTileView.getLabelContainer(),
++                                tileView.getLabelContainer(),
++                                view,
++                                xOffset,
++                                yOffset,
++                                mTmpLoc1,
++                                translationXBuilder,
++                                translationYBuilder,
++                                qqsTranslationYBuilder
++                        );
++
++                        // Secondary icon
++                        translateContent(
++                                quickTileView.getSecondaryIcon(),
++                                tileView.getSecondaryIcon(),
++                                view,
++                                xOffset,
++                                yOffset,
++                                mTmpLoc1,
++                                translationXBuilder,
++                                translationYBuilder,
++                                qqsTranslationYBuilder
++                        );
++
++                        // Secondary labels on tiles not in QQS have two alpha animation applied:
++                        // * on the tile themselves
++                        // * on TileLayout
++                        // Therefore, we use a quadratic interpolator animator to animate the alpha
++                        // for tiles in QQS to match.
++                        quadraticInterpolatorBuilder
++                                .addFloat(quickTileView.getLabelContainer()
++                                        .findViewById(R.id.tile_label_container), "alpha", 0, 1)
++                                .addFloat(quickTileView.getSecondaryLabel(), "alpha", 0, 1);
++                        nonFirstPageAlphaBuilder
++                                .addFloat(quickTileView.getSecondaryLabel(), "alpha", 0, 0);
++
++                        mAnimatedQsViews.add(tileView);
++                        mAllViews.add(quickTileView);
++                        mAllViews.add(quickTileView.getSecondaryLabel());
+                     }
+-
+-                    mQQSTileHeightAnimator.addView(quickTileView);
+-
+-                    // Icons
+-                    translateContent(
+-                            quickTileView.getIcon(),
+-                            tileView.getIcon(),
+-                            view,
+-                            xOffset,
+-                            yOffset,
+-                            mTmpLoc1,
+-                            translationXBuilder,
+-                            translationYBuilder,
+-                            qqsTranslationYBuilder
+-                    );
+-
+-                    // Label containers
+-                    translateContent(
+-                            quickTileView.getLabelContainer(),
+-                            tileView.getLabelContainer(),
+-                            view,
+-                            xOffset,
+-                            yOffset,
+-                            mTmpLoc1,
+-                            translationXBuilder,
+-                            translationYBuilder,
+-                            qqsTranslationYBuilder
+-                    );
+-
+-                    // Secondary icon
+-                    translateContent(
+-                            quickTileView.getSecondaryIcon(),
+-                            tileView.getSecondaryIcon(),
+-                            view,
+-                            xOffset,
+-                            yOffset,
+-                            mTmpLoc1,
+-                            translationXBuilder,
+-                            translationYBuilder,
+-                            qqsTranslationYBuilder
+-                    );
+-
+-                    // Secondary labels on tiles not in QQS have two alpha animation applied:
+-                    // * on the tile themselves
+-                    // * on TileLayout
+-                    // Therefore, we use a quadratic interpolator animator to animate the alpha
+-                    // for tiles in QQS to match.
+-                    quadraticInterpolatorBuilder
+-                            .addFloat(quickTileView.getLabelContainer()
+-                                    .findViewById(R.id.tile_label_container), "alpha", 0, 1)
+-                            .addFloat(quickTileView.getSecondaryLabel(), "alpha", 0, 1);
+-                    nonFirstPageAlphaBuilder
+-                            .addFloat(quickTileView.getSecondaryLabel(), "alpha", 0, 0);
+-
+-                    mAnimatedQsViews.add(tileView);
+-                    mAllViews.add(quickTileView);
+-                    mAllViews.add(quickTileView.getSecondaryLabel());
+                 } else if (!isIconInAnimatedRow(count)) {
+                     // Pretend there's a corresponding QQS tile (for the position) that we are
+                     // expanding from.
+@@ -407,8 +419,6 @@ public class QSAnimator implements QSHost.Callback, PagedTileLayout.PageListener
+                     getRelativePosition(mTmpLoc1, qqsLayout, view);
+                     mQQSTop = mTmpLoc1[1];
+                     getRelativePosition(mTmpLoc2, tileView, view);
+-                    int diff = mTmpLoc2[1] - (mTmpLoc1[1] + qqsLayout.getPhantomTopPosition(count));
+-                    translationYBuilder.addFloat(tileView, "translationY", -diff, 0);
+                     if (mOtherFirstPageTilesHeightAnimator == null) {
+                         mOtherFirstPageTilesHeightAnimator =
+                                 new HeightExpansionAnimator(
+@@ -418,6 +428,7 @@ public class QSAnimator implements QSHost.Callback, PagedTileLayout.PageListener
+                     tileView.setClipChildren(true);
+                     tileView.setClipToPadding(true);
+                     firstPageBuilder.addFloat(tileView.getSecondaryLabel(), "alpha", 0, 1);
++                    firstPageBuilder.setStartDelay(EXPANDED_TILE_DELAY);
+                     mAllViews.add(tileView.getSecondaryLabel());
+                 }
+ 
+@@ -571,7 +582,6 @@ public class QSAnimator implements QSHost.Callback, PagedTileLayout.PageListener
+                     // portrait orientation before
+                     .addFloat(qsBrightness, "sliderScaleY", 0.3f, 1)
+                     .addFloat(qqsBrightness, "translationY", 0, translationY)
+-                    .setInterpolator(mQSExpansionPathInterpolator.getYInterpolator())
+                     .build();
+         } else if (qsBrightness != null) {
+             // The brightness slider's visible bottom edge must maintain a constant margin from the
+@@ -621,7 +631,7 @@ public class QSAnimator implements QSHost.Callback, PagedTileLayout.PageListener
+             return false;
+         }
+         final int columnCount = mPagedLayout.getColumnCount();
+-        return count < ((mNumQuickTiles + columnCount - 1) / columnCount) * columnCount;
++        return count < ((mNumQuickTiles + columnCount - 2) / columnCount) * columnCount;
+     }
+ 
+     private void getRelativePosition(int[] loc1, View view, View parent) {
+-- 
+2.45.2
+

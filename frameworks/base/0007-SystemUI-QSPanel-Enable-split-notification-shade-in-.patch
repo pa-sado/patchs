@@ -1,0 +1,44 @@
+From 742037ddc71ac69bc36102531fddff1d2521025b Mon Sep 17 00:00:00 2001
+From: Col_or <color597@outlook.com>
+Date: Tue, 26 Jul 2022 15:12:31 +0800
+Subject: [PATCH 07/21] SystemUI: QSPanel: Enable split notification shade in
+ landscape mode
+
+Signed-off-by: Col_or <color597@outlook.com>
+Change-Id: I99154134f1c97d02c0711c9c71fd05328c0db8c8
+---
+ packages/SystemUI/res-keyguard/values-land/dimens.xml | 2 ++
+ packages/SystemUI/res/values-land/config.xml          | 6 ++++++
+ 2 files changed, 8 insertions(+)
+
+diff --git a/packages/SystemUI/res-keyguard/values-land/dimens.xml b/packages/SystemUI/res-keyguard/values-land/dimens.xml
+index a4e7a5f12db4..0b9dc3e55482 100644
+--- a/packages/SystemUI/res-keyguard/values-land/dimens.xml
++++ b/packages/SystemUI/res-keyguard/values-land/dimens.xml
+@@ -27,4 +27,6 @@
+     <integer name="scaled_password_text_size">26</integer>
+ 
+     <dimen name="bouncer_user_switcher_y_trans">@dimen/status_bar_height</dimen>
++
++    <dimen name="qs_header_system_icons_area_height">0dp</dimen>
+ </resources>
+diff --git a/packages/SystemUI/res/values-land/config.xml b/packages/SystemUI/res/values-land/config.xml
+index d800d49634d2..ac8ef330f20e 100644
+--- a/packages/SystemUI/res/values-land/config.xml
++++ b/packages/SystemUI/res/values-land/config.xml
+@@ -20,6 +20,12 @@
+ <!-- These resources are around just to allow their values to be customized
+      for different hardware and product builds. -->
+ <resources>
++    <!-- Whether to use the split 2-column notification shade -->
++    <bool name="config_use_split_notification_shade">true</bool>
++
++    <!-- Notifications are sized to match the width of two (of 4) qs tiles in landscape. -->
++    <bool name="config_skinnyNotifsInLandscape">false</bool>
++
+     <!-- The maximum number of rows in the QuickSettings -->
+     <integer name="quick_settings_max_rows">2</integer>
+ 
+-- 
+2.45.2
+

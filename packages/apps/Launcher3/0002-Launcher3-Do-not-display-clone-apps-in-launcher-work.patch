@@ -1,0 +1,98 @@
+From fb8269ab72f3e35853aa4101f7b3d18488ef180f Mon Sep 17 00:00:00 2001
+From: Ankita Vyas <ankitavyas@google.com>
+Date: Fri, 20 Jan 2023 09:19:29 +0000
+Subject: [PATCH 2/3] Launcher3: Do not display clone apps in launcher work
+ tab.
+
+This change is only for dogfooding and will not be part of android release.
+Guarded by feature flag.
+
+Test: manual
+Bug: 266177840
+Change-Id: Iee416b43e0864b98f08149c46b7d011271ba8de6
+Signed-off-by: Jyotiraditya Panda <jyotiraditya@aospa.co>
+---
+ .../launcher3/allapps/WorkProfileManager.java | 32 ++++++++++++++++++-
+ .../launcher3/config/FeatureFlags.java        |  5 +++
+ 2 files changed, 36 insertions(+), 1 deletion(-)
+
+diff --git a/src/com/android/launcher3/allapps/WorkProfileManager.java b/src/com/android/launcher3/allapps/WorkProfileManager.java
+index 74e7f9d53e..1af6613da0 100644
+--- a/src/com/android/launcher3/allapps/WorkProfileManager.java
++++ b/src/com/android/launcher3/allapps/WorkProfileManager.java
+@@ -46,12 +46,14 @@ import com.android.launcher3.LauncherPrefs;
+ import com.android.launcher3.R;
+ import com.android.launcher3.Utilities;
+ import com.android.launcher3.allapps.BaseAllAppsAdapter.AdapterItem;
++import com.android.launcher3.config.FeatureFlags;
+ import com.android.launcher3.logging.StatsLogManager;
+ import com.android.launcher3.model.data.ItemInfo;
+ import com.android.launcher3.workprofile.PersonalWorkSlidingTabStrip;
+ 
+ import java.lang.annotation.Retention;
+ import java.lang.annotation.RetentionPolicy;
++import java.lang.reflect.Method;
+ import java.util.ArrayList;
+ import java.util.function.Predicate;
+ 
+@@ -97,7 +99,12 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+             StatsLogManager statsLogManager) {
+         mUserManager = userManager;
+         mAllApps = allApps;
+-        mMatcher = mAllApps.mPersonalMatcher.negate();
++        boolean cloningChanges = FeatureFlags.ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER.get();
++        if (cloningChanges) {
++            mMatcher = ofWorkProfileUser(userManager);
++        } else {
++            mMatcher = mAllApps.mPersonalMatcher.negate();
++        }
+         mStatsLogManager = statsLogManager;
+     }
+ 
+@@ -284,4 +291,27 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+             }
+         };
+     }
++
++    /**
++     * Filter to only display apps in managed profile in work tab.
++     */
++    private Predicate<ItemInfo> ofWorkProfileUser(UserManager um) {
++        return info -> info != null && isManagedProfile(um, info.user.hashCode());
++    }
++
++
++    private static boolean isManagedProfile(UserManager um, int userId) {
++        try {
++            // isManagedProfile is a @SystemApi.
++            String methodName = "isManagedProfile";
++            Method method = um.getClass().getDeclaredMethod(methodName, int.class);
++            Object result = method.invoke(um, userId);
++            if (result instanceof Boolean) {
++                return (boolean) result;
++            }
++        } catch (Exception e) {
++            Log.e(TAG, "Failed to call #isManagedProfile via reflection from Launcher");
++        }
++        return false;
++    }
+ }
+diff --git a/src/com/android/launcher3/config/FeatureFlags.java b/src/com/android/launcher3/config/FeatureFlags.java
+index 795c6bf998..530b41a06d 100644
+--- a/src/com/android/launcher3/config/FeatureFlags.java
++++ b/src/com/android/launcher3/config/FeatureFlags.java
+@@ -207,6 +207,11 @@ public final class FeatureFlags {
+     public static final BooleanFlag ENABLE_TRANSIENT_TASKBAR = getDebugFlag(270395798,
+             "ENABLE_TRANSIENT_TASKBAR", ENABLED, "Enables transient taskbar.");
+ 
++    // TODO(Block 15): Clean up flags
++    public static final BooleanFlag ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER = getDebugFlag(266177840,
++            "ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER", DISABLED,
++            "Removes clone apps from the work profile tab.");
++
+     // TODO(Block 16): Clean up flags
+     // When enabled the promise icon is visible in all apps while installation an app.
+     public static final BooleanFlag PROMISE_APPS_IN_ALL_APPS = getDebugFlag(270390012,
+-- 
+2.45.2
+

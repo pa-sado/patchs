@@ -1,0 +1,100 @@
+From c95f4f2f5c5b02e23d701fe1c8a8599d90d62c35 Mon Sep 17 00:00:00 2001
+From: LuK1337 <priv.luk@gmail.com>
+Date: Sun, 26 Aug 2018 15:00:21 +0200
+Subject: [PATCH 1/9] Settings: Add build date to device info
+
+Signed-off-by: Adithya <gh0strider.2k18.reborn@gmail.com>
+Change-Id: I1a12c7ee060aec4569b00de8335b62f4b548f6f3
+---
+ res/values/strings.xml                        |  2 +
+ res/xml/firmware_version.xml                  |  8 ++++
+ .../BuildDatePreferenceController.java        | 45 +++++++++++++++++++
+ 3 files changed, 55 insertions(+)
+ create mode 100644 src/com/android/settings/deviceinfo/firmwareversion/BuildDatePreferenceController.java
+
+diff --git a/res/values/strings.xml b/res/values/strings.xml
+index d5eb832743f..94f42a3bde4 100644
+--- a/res/values/strings.xml
++++ b/res/values/strings.xml
+@@ -2749,6 +2749,8 @@
+     <string name="kernel_version">Kernel version</string>
+     <!-- About phone screen,  setting option name  [CHAR LIMIT=40] -->
+     <string name="build_number">Build number</string>
++    <!-- About phone screen,  setting option name  [CHAR LIMIT=40] -->
++    <string name="build_date">Build date</string>
+     <!-- About phone screen, tapping this button will take user to a seperate UI to check Google Play system update [CHAR LIMIT=60] -->
+     <string name="module_version">Google Play system update</string>
+     <!-- About phone screen, show a list of battery information  [CHAR LIMIT=60] -->
+diff --git a/res/xml/firmware_version.xml b/res/xml/firmware_version.xml
+index 41f7733cfb2..a64221fb6d5 100644
+--- a/res/xml/firmware_version.xml
++++ b/res/xml/firmware_version.xml
+@@ -64,6 +64,14 @@
+         settings:controller="com.android.settings.deviceinfo.firmwareversion.KernelVersionPreferenceController"/>
+ 
+     <!-- Build -->
++    <Preference
++        android:key="os_build_date"
++        android:title="@string/build_date"
++        android:summary="@string/summary_placeholder"
++        android:selectable="false"
++        settings:enableCopying="true"
++        settings:controller="com.android.settings.deviceinfo.firmwareversion.BuildDatePreferenceController"/>
++
+     <Preference
+         android:key="os_build_number"
+         android:title="@string/build_number"
+diff --git a/src/com/android/settings/deviceinfo/firmwareversion/BuildDatePreferenceController.java b/src/com/android/settings/deviceinfo/firmwareversion/BuildDatePreferenceController.java
+new file mode 100644
+index 00000000000..a82b241f6db
+--- /dev/null
++++ b/src/com/android/settings/deviceinfo/firmwareversion/BuildDatePreferenceController.java
+@@ -0,0 +1,45 @@
++/*
++ * Copyright (C) 2019 The LineageOS Project
++ *
++ * Licensed under the Apache License, Version 2.0 (the "License");
++ * you may not use this file except in compliance with the License.
++ * You may obtain a copy of the License at
++ *
++ *      http://www.apache.org/licenses/LICENSE-2.0
++ *
++ * Unless required by applicable law or agreed to in writing, software
++ * distributed under the License is distributed on an "AS IS" BASIS,
++ * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
++ * See the License for the specific language governing permissions and
++ * limitations under the License.
++ */
++
++package com.android.settings.deviceinfo.firmwareversion;
++
++import android.content.Context;
++import android.os.SystemProperties;
++
++import com.android.settings.R;
++import com.android.settings.core.BasePreferenceController;
++
++public class BuildDatePreferenceController extends BasePreferenceController {
++
++    private static final String TAG = "BuildDatePreferenceController";
++
++    private static final String KEY_BUILD_DATE_PROP = "ro.build.date";
++
++    public BuildDatePreferenceController(Context context, String key) {
++        super(context, key);
++    }
++
++    @Override
++    public int getAvailabilityStatus() {
++        return AVAILABLE;
++    }
++
++    @Override
++    public CharSequence getSummary() {
++        return SystemProperties.get(KEY_BUILD_DATE_PROP,
++                mContext.getString(R.string.unknown));
++    }
++}
+-- 
+2.45.2
+

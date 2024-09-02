@@ -1,0 +1,51 @@
+From 5a6aefd93be564f0c73a6d53b8b1030f7d0b40cc Mon Sep 17 00:00:00 2001
+From: Adin Kwok <adin.kwok@carbonrom.org>
+Date: Wed, 6 Nov 2019 22:23:05 -0800
+Subject: [PATCH 7/9] Settings: Add toggle for advanced reboot [2/2]
+
+Change-Id: I19cf88238b8c2b2297a0fc32f1b9536c14b8fe85
+[ghostrider-reborn: move to power button settings]
+Signed-off-by: Adithya <gh0strider.2k18.reborn@gmail.com>
+Signed-off-by: rk134 <me@rk134.cf>
+Signed-off-by: rk134 <rahul@aospa.co>
+Signed-off-by: Jprimero15 <jprimero15@aospa.co>
+---
+ res/values/aospa_strings.xml    | 4 ++++
+ res/xml/power_menu_settings.xml | 6 ++++++
+ 2 files changed, 10 insertions(+)
+
+diff --git a/res/values/aospa_strings.xml b/res/values/aospa_strings.xml
+index 403642e7b43..ac371963ef6 100644
+--- a/res/values/aospa_strings.xml
++++ b/res/values/aospa_strings.xml
+@@ -22,6 +22,10 @@
+     <string name="ignore_window_secure_title">Ignore window secure flags</string>
+     <string name="ignore_window_secure_summary">Remove screenshot and screenrecord limits for all apps. This can be convenient in some cases but may lead to privacy leaks.</string>
+ 
++    <!-- Global Actions -->
++    <string name="global_actions_advanced_reboot_title">Advanced restart</string>
++    <string name="global_actions_advanced_reboot_summary">Show options for recovery and bootloader in power menu</string>
++
+     <!-- DC Dimming -->
+     <string name="dc_dimming_title">DC Dimming</string>
+     <string name="dc_dimming_info">Reduces eye strain in low light conditions by minimizing screen flicker. May result in reduced image quality and poor color production, or higher power consumption.</string>
+diff --git a/res/xml/power_menu_settings.xml b/res/xml/power_menu_settings.xml
+index 48cc40c0bd4..196d246e378 100644
+--- a/res/xml/power_menu_settings.xml
++++ b/res/xml/power_menu_settings.xml
+@@ -40,6 +40,12 @@
+             settings:controller="com.android.settings.gestures.LongPressPowerForAssistantPreferenceController"/>
+     </PreferenceCategory>
+ 
++    <co.aospa.framework.preference.SystemSettingSwitchPreference
++        android:key="advanced_reboot"
++        android:title="@string/global_actions_advanced_reboot_title"
++        android:summary="@string/global_actions_advanced_reboot_summary"
++        android:defaultValue="false" />
++
+     <com.android.settings.widget.LabeledSeekBarPreference
+         android:key="gesture_power_menu_long_press_for_assist_sensitivity"
+         android:title="@string/power_menu_long_press_for_assist_sensitivity_title"
+-- 
+2.45.2
+

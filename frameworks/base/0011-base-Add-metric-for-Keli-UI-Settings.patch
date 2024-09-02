@@ -1,0 +1,27 @@
+From d9826cd2cffdf592def11b9445c3c8617c39a9b4 Mon Sep 17 00:00:00 2001
+From: QKIvan <ivan33@163.com>
+Date: Sun, 27 Aug 2023 11:35:04 +0800
+Subject: [PATCH 11/21] base: Add metric for Keli-UI Settings
+
+Change-Id: Ie37f4aa95f0aa79aa3ad9d8bcf5c506b677e3418
+---
+ proto/src/metrics_constants/metrics_constants.proto | 4 ++++
+ 1 file changed, 4 insertions(+)
+
+diff --git a/proto/src/metrics_constants/metrics_constants.proto b/proto/src/metrics_constants/metrics_constants.proto
+index ced97cc0b39e..8a3ddd8e72e9 100644
+--- a/proto/src/metrics_constants/metrics_constants.proto
++++ b/proto/src/metrics_constants/metrics_constants.proto
+@@ -7438,5 +7438,9 @@ message MetricsEvent {
+     // ---- End Q Constants, all Q constants go above this line ----
+     // Add new aosp constants above this line.
+     // END OF AOSP CONSTANTS
++
++    // Keli-UI Settings
++    KELI_SETTINGS = 4000;
++
+   }
+ }
+-- 
+2.45.2
+

@@ -1,0 +1,325 @@
+From 28e7d187cef4d223289481a2d017f950e0f7ead2 Mon Sep 17 00:00:00 2001
+From: ReallySnow <reallysnow233@gmail.com>
+Date: Sat, 30 Jul 2022 05:26:45 +0800
+Subject: [PATCH 02/21] SystemUI: Add Brightness slider into QuickQS
+
+    Also squashed with:
+        SystemUI: QSPanel: Move brightness bar to the bottom of qs indicator and the top of footer action
+
+        Signed-off-by: Col_or <color597@outlook.com>
+        Change-Id: If8dd636494d958ffc96af343f1649eb8f2e06e7e
+
+Change-Id: I8a7b2b69ffa1e4705dafe0e2a982d02084aa7dc5
+Co-authored-by: Col_or <color597@outlook.com>
+---
+ .../SystemUI/res/layout/qs_footer_impl.xml    | 12 +++++
+ .../quick_status_bar_expanded_header.xml      |  6 +++
+ .../com/android/systemui/qs/QSFragment.java   |  1 +
+ .../src/com/android/systemui/qs/QSPanel.java  | 11 ++--
+ .../systemui/qs/QSPanelController.java        |  6 +--
+ .../com/android/systemui/qs/QuickQSPanel.java | 27 ++++++++--
+ .../systemui/qs/QuickQSPanelController.java   | 50 ++++++++++++++++++-
+ 7 files changed, 99 insertions(+), 14 deletions(-)
+
+diff --git a/packages/SystemUI/res/layout/qs_footer_impl.xml b/packages/SystemUI/res/layout/qs_footer_impl.xml
+index b8f4c0f212c3..ecdc4daa8b0f 100644
+--- a/packages/SystemUI/res/layout/qs_footer_impl.xml
++++ b/packages/SystemUI/res/layout/qs_footer_impl.xml
+@@ -29,6 +29,11 @@
+     android:clipChildren="false"
+     android:clipToPadding="false">
+ 
++    <LinearLayout
++        android:layout_width="match_parent"
++        android:layout_height="wrap_content"
++        android:orientation="vertical">
++
+         <LinearLayout
+             android:layout_width="match_parent"
+             android:layout_height="@dimen/qs_footer_height"
+@@ -76,4 +81,11 @@
+ 
+         </LinearLayout>
+ 
++        <FrameLayout
++            android:id="@+id/qs_brightness_dialog"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content" />
++
++    </LinearLayout>
++
+ </com.android.systemui.qs.QSFooterView>
+diff --git a/packages/SystemUI/res/layout/quick_status_bar_expanded_header.xml b/packages/SystemUI/res/layout/quick_status_bar_expanded_header.xml
+index 1749ed403c09..e5827f7fd248 100644
+--- a/packages/SystemUI/res/layout/quick_status_bar_expanded_header.xml
++++ b/packages/SystemUI/res/layout/quick_status_bar_expanded_header.xml
+@@ -38,11 +38,17 @@
+         android:layout_width="match_parent"
+         android:layout_height="wrap_content"
+         android:layout_marginTop="@dimen/qqs_layout_margin_top"
++        android:layout_marginHorizontal="@dimen/qs_footer_margin"
+         android:clipChildren="false"
+         android:clipToPadding="false"
+         android:focusable="true"
+         android:paddingBottom="@dimen/qqs_layout_padding_bottom"
+         android:importantForAccessibility="no">
++        <FrameLayout
++            android:id="@+id/qs_brightness_dialog"
++            android:layout_width="match_parent"
++            android:layout_height="wrap_content"
++            android:layout_marginTop="12dp" />
+     </com.android.systemui.qs.QuickQSPanel>
+ 
+ </com.android.systemui.qs.QuickStatusBarHeader>
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QSFragment.java b/packages/SystemUI/src/com/android/systemui/qs/QSFragment.java
+index ddb395b6b598..ac674649a636 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QSFragment.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QSFragment.java
+@@ -507,6 +507,7 @@ public class QSFragment extends LifecycleFragment implements QS, CommandQueue.Ca
+ 
+     public void setBrightnessMirrorController(
+             BrightnessMirrorController brightnessMirrorController) {
++        mQuickQSPanelController.setBrightnessMirror(brightnessMirrorController);
+         mQSPanelController.setBrightnessMirror(brightnessMirrorController);
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QSPanel.java b/packages/SystemUI/src/com/android/systemui/qs/QSPanel.java
+index b936c41d9295..ea105563aba2 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QSPanel.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QSPanel.java
+@@ -182,15 +182,20 @@ public class QSPanel extends LinearLayout implements Tunable {
+             removeView(mBrightnessView);
+             mMovableContentStartIndex--;
+         }
+-        addView(view, 0);
+         mBrightnessView = view;
+ 
++        ViewGroup brightnessViewContainer = findViewById(R.id.qs_brightness_dialog);
++        if (brightnessViewContainer.indexOfChild(view) > -1) {
++            brightnessViewContainer.removeView(view);
++        }
++        brightnessViewContainer.addView(view);
++
+         setBrightnessViewMargin();
+ 
+         mMovableContentStartIndex++;
+     }
+ 
+-    private void setBrightnessViewMargin() {
++    protected void setBrightnessViewMargin() {
+         if (mBrightnessView != null) {
+             MarginLayoutParams lp = (MarginLayoutParams) mBrightnessView.getLayoutParams();
+             lp.topMargin = mContext.getResources()
+@@ -322,7 +327,7 @@ public class QSPanel extends LinearLayout implements Tunable {
+     @Override
+     public void onTuningChanged(String key, String newValue) {
+         if (QS_SHOW_BRIGHTNESS.equals(key) && mBrightnessView != null) {
+-            updateViewVisibilityForTuningValue(mBrightnessView, newValue);
++            mBrightnessView.setVisibility(VISIBLE);
+         }
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QSPanelController.java b/packages/SystemUI/src/com/android/systemui/qs/QSPanelController.java
+index 856a92e85ad7..fcb33d348532 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QSPanelController.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QSPanelController.java
+@@ -164,11 +164,7 @@ public class QSPanelController extends QSPanelControllerBase<QSPanel> {
+             mListening = listening;
+             // Set the listening as soon as the QS fragment starts listening regardless of the
+             //expansion, so it will update the current brightness before the slider is visible.
+-            if (listening) {
+-                mBrightnessController.registerCallbacks();
+-            } else {
+-                mBrightnessController.unregisterCallbacks();
+-            }
++            mBrightnessController.registerCallbacks();
+         }
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java
+index d8899796b336..118e7bf1741b 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java
+@@ -16,10 +16,12 @@
+ 
+ package com.android.systemui.qs;
+ 
++import android.annotation.NonNull;
+ import android.content.Context;
+ import android.content.res.Configuration;
+ import android.util.AttributeSet;
+ import android.view.View;
++import android.view.ViewGroup;
+ import android.view.accessibility.AccessibilityNodeInfo;
+ import android.widget.LinearLayout;
+ 
+@@ -29,12 +31,15 @@ import com.android.systemui.R;
+ import com.android.systemui.plugins.qs.QSTile;
+ import com.android.systemui.plugins.qs.QSTile.SignalState;
+ import com.android.systemui.plugins.qs.QSTile.State;
++import com.android.systemui.tuner.TunerService;
+ 
+ /**
+  * Version of QSPanel that only shows N Quick Tiles in the QS Header.
+  */
+ public class QuickQSPanel extends QSPanel {
+ 
++    public static final String QS_SHOW_BRIGHTNESS = "qs_show_brightness";
++
+     private static final String TAG = "QuickQSPanel";
+     // A fallback value for max tiles number when setting via Tuner (parseNumTiles)
+     public static final int TUNER_MAX_TILES_FALLBACK = 6;
+@@ -47,6 +52,20 @@ public class QuickQSPanel extends QSPanel {
+         mMaxTiles = getResources().getInteger(R.integer.quick_qs_panel_max_tiles);
+     }
+ 
++    @Override
++    public void setBrightnessView(@NonNull View view) {
++        if (mBrightnessView != null) {
++            removeView(mBrightnessView);
++        }
++        mBrightnessView = view;
++        ViewGroup brightnessViewContainer = findViewById(R.id.qs_brightness_dialog);
++        if (brightnessViewContainer.indexOfChild(view) > -1) {
++            brightnessViewContainer.removeView(view);
++        }
++        brightnessViewContainer.addView(view);
++        setBrightnessViewMargin();
++    }
++
+     @Override
+     protected void setHorizontalContentContainerClipping() {
+         mHorizontalContentContainer.setClipToPadding(false);
+@@ -74,11 +93,10 @@ public class QuickQSPanel extends QSPanel {
+ 
+     @Override
+     protected void updatePadding() {
+-        int bottomPadding = getResources().getDimensionPixelSize(R.dimen.qqs_layout_padding_bottom);
+         setPaddingRelative(getPaddingStart(),
+                 getPaddingTop(),
+                 getPaddingEnd(),
+-                bottomPadding);
++                0);
+     }
+ 
+     @Override
+@@ -110,9 +128,8 @@ public class QuickQSPanel extends QSPanel {
+ 
+     @Override
+     public void onTuningChanged(String key, String newValue) {
+-        if (QS_SHOW_BRIGHTNESS.equals(key)) {
+-            // No Brightness or Tooltip for you!
+-            super.onTuningChanged(key, "0");
++        if (QS_SHOW_BRIGHTNESS.equals(key) && mBrightnessView != null) {
++            mBrightnessView.setVisibility(VISIBLE);
+         }
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java
+index 2d543139a1b4..89e86503a170 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java
+@@ -17,6 +17,7 @@
+ package com.android.systemui.qs;
+ 
+ import static com.android.systemui.media.dagger.MediaModule.QUICK_QS_PANEL;
++import static com.android.systemui.qs.QuickQSPanel.QS_SHOW_BRIGHTNESS;
+ import static com.android.systemui.qs.dagger.QSFragmentModule.QS_USING_COLLAPSED_LANDSCAPE_MEDIA;
+ import static com.android.systemui.qs.dagger.QSFragmentModule.QS_USING_MEDIA_PLAYER;
+ 
+@@ -32,6 +33,11 @@ import com.android.systemui.plugins.qs.QSTile;
+ import com.android.systemui.qs.customize.QSCustomizerController;
+ import com.android.systemui.qs.dagger.QSScope;
+ import com.android.systemui.qs.logging.QSLogger;
++import com.android.systemui.settings.brightness.BrightnessController;
++import com.android.systemui.settings.brightness.BrightnessMirrorHandler;
++import com.android.systemui.settings.brightness.BrightnessSliderController;
++import com.android.systemui.statusbar.policy.BrightnessMirrorController;
++import com.android.systemui.tuner.TunerService;
+ import com.android.systemui.util.leak.RotationUtils;
+ 
+ import java.util.ArrayList;
+@@ -47,6 +53,11 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+ 
+     private final Provider<Boolean> mUsingCollapsedLandscapeMediaProvider;
+ 
++    private final BrightnessController mBrightnessController;
++    private final BrightnessSliderController mBrightnessSliderController;
++    private final BrightnessMirrorHandler mBrightnessMirrorHandler;
++    private final TunerService mTunerService;
++
+     @Inject
+     QuickQSPanelController(QuickQSPanel view, QSHost qsHost,
+             QSCustomizerController qsCustomizerController,
+@@ -55,11 +66,19 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+             @Named(QS_USING_COLLAPSED_LANDSCAPE_MEDIA)
+                     Provider<Boolean> usingCollapsedLandscapeMediaProvider,
+             MetricsLogger metricsLogger, UiEventLogger uiEventLogger, QSLogger qsLogger,
+-            DumpManager dumpManager
++            DumpManager dumpManager,
++            TunerService tunerService,
++            BrightnessController.Factory brightnessControllerFactory,
++            BrightnessSliderController.Factory brightnessSliderFactory
+     ) {
+         super(view, qsHost, qsCustomizerController, usingMediaPlayer, mediaHost, metricsLogger,
+                 uiEventLogger, qsLogger, dumpManager);
+         mUsingCollapsedLandscapeMediaProvider = usingCollapsedLandscapeMediaProvider;
++        mTunerService = tunerService;
++        mBrightnessSliderController = brightnessSliderFactory.create(getContext(), mView);
++        mView.setBrightnessView(mBrightnessSliderController.getRootView());
++        mBrightnessController = brightnessControllerFactory.create(mBrightnessSliderController);
++        mBrightnessMirrorHandler = new BrightnessMirrorHandler(mBrightnessController);
+     }
+ 
+     @Override
+@@ -68,6 +87,7 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+         updateMediaExpansion();
+         mMediaHost.setShowsOnlyActiveMedia(true);
+         mMediaHost.init(MediaHierarchyManager.LOCATION_QQS);
++        mBrightnessSliderController.init();
+     }
+ 
+     private void updateMediaExpansion() {
+@@ -90,11 +110,39 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+     @Override
+     protected void onViewAttached() {
+         super.onViewAttached();
++        mTunerService.addTunable(mView, QS_SHOW_BRIGHTNESS);
++        mView.updateResources();
++        if (mView.isListening()) {
++            refreshAllTiles();
++        }
++        mBrightnessMirrorHandler.onQsPanelAttached();
+     }
+ 
+     @Override
+     protected void onViewDetached() {
+         super.onViewDetached();
++        mTunerService.removeTunable(mView);
++        mView.removeOnConfigurationChangedListener(mOnConfigurationChangedListener);
++        mBrightnessMirrorHandler.onQsPanelDettached();
++    }
++
++    @Override
++    void setListening(boolean listening) {
++        super.setListening(listening);
++        mBrightnessController.registerCallbacks();
++    }
++
++    public void setBrightnessMirror(BrightnessMirrorController brightnessMirrorController) {
++        mBrightnessMirrorHandler.setController(brightnessMirrorController);
++    }
++
++    public void refreshAllTiles() {
++        mBrightnessController.checkRestrictionAndSetEnabled();
++        super.refreshAllTiles();
++    }
++
++    public boolean isListening() {
++        return mView.isListening();
+     }
+ 
+     private void setMaxTiles(int parseNumTiles) {
+-- 
+2.45.2
+

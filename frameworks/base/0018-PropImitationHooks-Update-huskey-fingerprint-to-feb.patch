@@ -1,0 +1,26 @@
+From b02b820e1a32551c084486c8a25dae74f7a6f76f Mon Sep 17 00:00:00 2001
+From: Akash Srivastava <akashniki@gmail.com>
+Date: Sun, 11 Feb 2024 10:08:11 +0100
+Subject: [PATCH 18/21] PropImitationHooks: Update huskey fingerprint to feb
+
+Change-Id: Ie568171fa34150ceee49edb45990f3781b6a96c6
+---
+ core/java/com/android/internal/util/PropImitationHooks.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/java/com/android/internal/util/PropImitationHooks.java b/core/java/com/android/internal/util/PropImitationHooks.java
+index 792c75601c07..07f432002bbd 100644
+--- a/core/java/com/android/internal/util/PropImitationHooks.java
++++ b/core/java/com/android/internal/util/PropImitationHooks.java
+@@ -68,7 +68,7 @@ public class PropImitationHooks {
+         "MANUFACTURER", "Google",
+         "BRAND", "google",
+         "MODEL", "Pixel 8 Pro",
+-        "FINGERPRINT", "google/husky/husky:14/UQ1A.240105.004/11206848:user/release-keys"
++        "FINGERPRINT", "google/husky/husky:14/UQ1A.240205.004/11269751:user/release-keys"
+     );
+ 
+     private static final Map<String, String> sPixelXLProps = new HashMap<>();
+-- 
+2.45.2
+

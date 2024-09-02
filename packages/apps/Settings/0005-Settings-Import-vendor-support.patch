@@ -1,0 +1,25 @@
+From 8668da23f9fa36e99172038de322fb86e8b0ed7a Mon Sep 17 00:00:00 2001
+From: WilliamSado <williamsado1004@gmail.com>
+Date: Fri, 5 Apr 2024 22:36:22 +0800
+Subject: [PATCH 5/9] Settings: Import vendor support
+
+Change-Id: Ib1f3587712e2ee1da835de1e9a808a3d57e44171
+---
+ Android.bp | 1 +
+ 1 file changed, 1 insertion(+)
+
+diff --git a/Android.bp b/Android.bp
+index f15e4255a18..d30caab0398 100644
+--- a/Android.bp
++++ b/Android.bp
+@@ -95,6 +95,7 @@ android_library {
+         "androidx.recyclerview_recyclerview",
+         "androidx.window_window",
+         "com.google.android.material_material",
++        "VendorSupport-preference",
+         "setupcompat",
+         "setupdesign",
+         "androidx.lifecycle_lifecycle-runtime",
+-- 
+2.45.2
+

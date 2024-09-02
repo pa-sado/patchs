@@ -1,0 +1,292 @@
+From 58ce6c2d0cb2fe12124fd40ee849ce537e9d1563 Mon Sep 17 00:00:00 2001
+From: Tommy Webb <tommy@calyxinstitute.org>
+Date: Wed, 5 Jul 2023 15:06:36 -0400
+Subject: [PATCH 1/3] Launcher3: Work tab adjustments for multiple profiles
+
+* When multiple work profiles are present, always show work apps
+  in the app drawer as opposed to hiding them behind a Paused screen.
+  This allows a particular work profile to be activated individually
+  by attempting to launch one of its apps.
+* The floating action button for turning off work apps can now turn
+  them all on, too, when all work profiles are turned off.
+
+Change-Id: I564c4afb55f47e3d9463790b7c45b94b3303b39a
+---
+ .../launcher3/allapps/WorkModeSwitch.java     | 16 ++++++++--
+ .../launcher3/allapps/WorkProfileManager.java | 31 +++++++++++++++----
+ .../android/launcher3/model/BgDataModel.java  |  2 ++
+ .../android/launcher3/model/LoaderTask.java   |  5 ++-
+ .../launcher3/model/PackageUpdatedTask.java   |  4 ++-
+ .../launcher3/model/UserManagerState.java     | 31 +++++++++++++++----
+ .../widget/picker/WidgetsFullSheet.java       |  2 +-
+ 7 files changed, 74 insertions(+), 17 deletions(-)
+
+diff --git a/src/com/android/launcher3/allapps/WorkModeSwitch.java b/src/com/android/launcher3/allapps/WorkModeSwitch.java
+index 144381c9c1..07dcdb08f3 100644
+--- a/src/com/android/launcher3/allapps/WorkModeSwitch.java
++++ b/src/com/android/launcher3/allapps/WorkModeSwitch.java
+@@ -59,6 +59,7 @@ public class WorkModeSwitch extends LinearLayout implements Insettable,
+     private ImageView mIcon;
+     private TextView mTextView;
+     private final StatsLogManager mStatsLogManager;
++    private boolean mDoPause = true;
+ 
+ 
+     public WorkModeSwitch(@NonNull Context context) {
+@@ -90,7 +91,7 @@ public class WorkModeSwitch extends LinearLayout implements Insettable,
+         }
+ 
+         setInsets(mActivityContext.getDeviceProfile().getInsets());
+-        updateStringFromCache();
++        updatePauseMode();
+     }
+ 
+     @Override
+@@ -210,7 +211,18 @@ public class WorkModeSwitch extends LinearLayout implements Insettable,
+     public void updateStringFromCache(){
+         StringCache cache = mActivityContext.getStringCache();
+         if (cache != null) {
+-            mTextView.setText(cache.workProfilePauseButton);
++            mTextView.setText(mDoPause ? cache.workProfilePauseButton :
++                    cache.workProfileEnableButton);
+         }
+     }
++
++    private void updatePauseMode() {
++        mIcon.setImageResource(mDoPause ? R.drawable.ic_corp_off : R.drawable.ic_corp);
++        updateStringFromCache();
++    }
++
++    public void setPauseMode(final boolean doPause) {
++        mDoPause = doPause;
++        updatePauseMode();
++    }
+ }
+diff --git a/src/com/android/launcher3/allapps/WorkProfileManager.java b/src/com/android/launcher3/allapps/WorkProfileManager.java
+index 1ac8d87a77..74e7f9d53e 100644
+--- a/src/com/android/launcher3/allapps/WorkProfileManager.java
++++ b/src/com/android/launcher3/allapps/WorkProfileManager.java
+@@ -22,6 +22,8 @@ import static com.android.launcher3.allapps.ActivityAllAppsContainerView.Adapter
+ import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_DISABLED_CARD;
+ import static com.android.launcher3.allapps.BaseAllAppsAdapter.VIEW_TYPE_WORK_EDU_CARD;
+ import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TURN_OFF_WORK_APPS_TAP;
++import static com.android.launcher3.logging.StatsLogManager.LauncherEvent.LAUNCHER_TURN_ON_WORK_APPS_TAP;
++import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_HAS_MULTIPLE_PROFILES;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_HAS_SHORTCUT_PERMISSION;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_CHANGE_PERMISSION;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_ENABLED;
+@@ -88,6 +90,8 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+     @WorkProfileState
+     private int mCurrentState;
+ 
++    private boolean mHasMultipleProfiles;
++
+     public WorkProfileManager(
+             UserManager userManager, ActivityAllAppsContainerView allApps,
+             StatsLogManager statsLogManager) {
+@@ -122,7 +126,14 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+         if (mWorkModeSwitch != null) {
+             if (page == MAIN || page == SEARCH) {
+                 mWorkModeSwitch.animateVisibility(false);
+-            } else if (page == WORK && mCurrentState == STATE_ENABLED) {
++            } else if (page == WORK && shouldShowWorkApps()) {
++                if (mCurrentState == STATE_ENABLED) {
++                    mWorkModeSwitch.setPauseMode(true /* doPause */);
++                    mWorkModeSwitch.setOnClickListener(this::onWorkFabClickedTurnOff);
++                } else if (mCurrentState == STATE_DISABLED) {
++                    mWorkModeSwitch.setPauseMode(false /* doPause */);
++                    mWorkModeSwitch.setOnClickListener(this::onWorkFabClickedTurnOn);
++                }
+                 mWorkModeSwitch.animateVisibility(true);
+             }
+         }
+@@ -142,6 +153,7 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+     }
+ 
+     private void updateCurrentState(@WorkProfileState int currentState) {
++        mHasMultipleProfiles = mAllApps.getAppsStore().hasModelFlag(FLAG_HAS_MULTIPLE_PROFILES);
+         mCurrentState = currentState;
+         if (getAH() != null) {
+             getAH().mAppsList.updateAdapterItems();
+@@ -149,7 +161,7 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+         if (mWorkModeSwitch != null) {
+             updateWorkFAB(mAllApps.getCurrentPage());
+         }
+-        if (mCurrentState == STATE_ENABLED) {
++        if (shouldShowWorkApps()) {
+             attachWorkModeSwitch();
+         } else if (mCurrentState == STATE_DISABLED) {
+             detachWorkModeSwitch();
+@@ -178,7 +190,6 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+         if (getAH() != null) {
+             getAH().applyPadding();
+         }
+-        mWorkModeSwitch.setOnClickListener(this::onWorkFabClicked);
+         return true;
+     }
+     /**
+@@ -212,14 +223,15 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+      * returns whether or not work apps should be visible in work tab.
+      */
+     public boolean shouldShowWorkApps() {
+-        return mCurrentState != WorkProfileManager.STATE_DISABLED;
++        return mCurrentState != WorkProfileManager.STATE_DISABLED
++                || mHasMultipleProfiles;
+     }
+ 
+     /**
+      * Adds work profile specific adapter items to adapterItems and returns number of items added
+      */
+     public int addWorkItems(ArrayList<AdapterItem> adapterItems) {
+-        if (mCurrentState == WorkProfileManager.STATE_DISABLED) {
++        if (!shouldShowWorkApps()) {
+             //add disabled card here.
+             adapterItems.add(new AdapterItem(VIEW_TYPE_WORK_DISABLED_CARD));
+         } else if (mCurrentState == WorkProfileManager.STATE_ENABLED && !isEduSeen()) {
+@@ -232,13 +244,20 @@ public class WorkProfileManager implements PersonalWorkSlidingTabStrip.OnActiveP
+         return LauncherPrefs.get(mAllApps.getContext()).get(WORK_EDU_STEP) != 0;
+     }
+ 
+-    private void onWorkFabClicked(View view) {
++    private void onWorkFabClickedTurnOff(View view) {
+         if (Utilities.ATLEAST_P && mCurrentState == STATE_ENABLED && mWorkModeSwitch.isEnabled()) {
+             mStatsLogManager.logger().log(LAUNCHER_TURN_OFF_WORK_APPS_TAP);
+             setWorkProfileEnabled(false);
+         }
+     }
+ 
++    private void onWorkFabClickedTurnOn(View view) {
++        if (Utilities.ATLEAST_P && mCurrentState == STATE_DISABLED && mWorkModeSwitch.isEnabled()) {
++            mStatsLogManager.logger().log(LAUNCHER_TURN_ON_WORK_APPS_TAP);
++            setWorkProfileEnabled(true);
++        }
++    }
++
+     public RecyclerView.OnScrollListener newScrollListener() {
+         return new RecyclerView.OnScrollListener() {
+             int totalDelta = 0;
+diff --git a/src/com/android/launcher3/model/BgDataModel.java b/src/com/android/launcher3/model/BgDataModel.java
+index 46d043fb10..c8b7163666 100644
+--- a/src/com/android/launcher3/model/BgDataModel.java
++++ b/src/com/android/launcher3/model/BgDataModel.java
+@@ -453,6 +453,8 @@ public class BgDataModel {
+         int FLAG_QUIET_MODE_ENABLED = 1 << 1;
+         // If launcher can change quiet mode
+         int FLAG_QUIET_MODE_CHANGE_PERMISSION = 1 << 2;
++        // If user has more than one work profile
++        int FLAG_HAS_MULTIPLE_PROFILES = 1 << 3;
+ 
+         /**
+          * Returns an IntSet of page ids to bind first, synchronously if possible
+diff --git a/src/com/android/launcher3/model/LoaderTask.java b/src/com/android/launcher3/model/LoaderTask.java
+index d6f5d37088..270740e19f 100644
+--- a/src/com/android/launcher3/model/LoaderTask.java
++++ b/src/com/android/launcher3/model/LoaderTask.java
+@@ -17,6 +17,7 @@
+ package com.android.launcher3.model;
+ 
+ import static com.android.launcher3.LauncherSettings.Favorites.TABLE_NAME;
++import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_HAS_MULTIPLE_PROFILES;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_HAS_SHORTCUT_PERMISSION;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_CHANGE_PERMISSION;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_ENABLED;
+@@ -991,7 +992,9 @@ public class LoaderTask implements Runnable {
+         }
+ 
+         mBgAllAppsList.setFlags(FLAG_QUIET_MODE_ENABLED,
+-                mUserManagerState.isAnyProfileQuietModeEnabled());
++                mUserManagerState.isAllProfilesQuietModeEnabled());
++        mBgAllAppsList.setFlags(FLAG_HAS_MULTIPLE_PROFILES,
++                mUserManagerState.hasMultipleProfiles());
+         mBgAllAppsList.setFlags(FLAG_HAS_SHORTCUT_PERMISSION,
+                 hasShortcutsPermission(mApp.getContext()));
+         mBgAllAppsList.setFlags(FLAG_QUIET_MODE_CHANGE_PERMISSION,
+diff --git a/src/com/android/launcher3/model/PackageUpdatedTask.java b/src/com/android/launcher3/model/PackageUpdatedTask.java
+index 9c2466df94..47487b0a98 100644
+--- a/src/com/android/launcher3/model/PackageUpdatedTask.java
++++ b/src/com/android/launcher3/model/PackageUpdatedTask.java
+@@ -15,6 +15,7 @@
+  */
+ package com.android.launcher3.model;
+ 
++import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_HAS_MULTIPLE_PROFILES;
+ import static com.android.launcher3.model.BgDataModel.Callbacks.FLAG_QUIET_MODE_ENABLED;
+ import static com.android.launcher3.model.data.WorkspaceItemInfo.FLAG_AUTOINSTALL_ICON;
+ import static com.android.launcher3.model.data.WorkspaceItemInfo.FLAG_RESTORED_ICON;
+@@ -181,7 +182,8 @@ public class PackageUpdatedTask extends BaseModelUpdateTask {
+                 appsList.updateDisabledFlags(matcher, flagOp);
+ 
+                 // We are not synchronizing here, as int operations are atomic
+-                appsList.setFlags(FLAG_QUIET_MODE_ENABLED, ums.isAnyProfileQuietModeEnabled());
++                appsList.setFlags(FLAG_QUIET_MODE_ENABLED, ums.isAllProfilesQuietModeEnabled());
++                appsList.setFlags(FLAG_HAS_MULTIPLE_PROFILES, ums.hasMultipleProfiles());
+                 break;
+             }
+             default:
+diff --git a/src/com/android/launcher3/model/UserManagerState.java b/src/com/android/launcher3/model/UserManagerState.java
+index 97a5905f0a..f6c1521533 100644
+--- a/src/com/android/launcher3/model/UserManagerState.java
++++ b/src/com/android/launcher3/model/UserManagerState.java
+@@ -15,6 +15,7 @@
+  */
+ package com.android.launcher3.model;
+ 
++import android.os.Process;
+ import android.os.UserHandle;
+ import android.os.UserManager;
+ import android.util.LongSparseArray;
+@@ -60,14 +61,32 @@ public class UserManagerState {
+     }
+ 
+     /**
+-     * Returns true if any user profile has quiet mode enabled.
++     * Returns true if all managed profiles have quiet mode enabled.
+      */
+-    public boolean isAnyProfileQuietModeEnabled() {
+-        for (int i = mQuietUsersHashCodeMap.size() - 1; i >= 0; i--) {
+-            if (mQuietUsersHashCodeMap.valueAt(i)) {
+-                return true;
++    public boolean isAllProfilesQuietModeEnabled() {
++        // Because the parent user is included, there will always be at least one user returned
++        // by getUserProfiles and tracked by allUsers, even if there are no managed profiles.
++        final int numProfilesIncludingParent = allUsers.size();
++        if (numProfilesIncludingParent <= 1) {
++            // There are no managed profiles, only the parent user, so we can return early.
++            return false;
++        }
++        for (int i = 0; i < numProfilesIncludingParent; i++) {
++            if (Process.myUserHandle().equals(allUsers.valueAt(i))) {
++                // Skip the parent user.
++                continue;
++            }
++            long serialNo = allUsers.keyAt(i);
++            if (!isUserQuiet(serialNo)) {
++                return false;
+             }
+         }
+-        return false;
++        // Quiet mode is on for all users.
++        return true;
++    }
++
++    public boolean hasMultipleProfiles() {
++        final int numProfiles = allUsers.size() - 1; // not including the parent
++        return numProfiles > 1;
+     }
+ }
+diff --git a/src/com/android/launcher3/widget/picker/WidgetsFullSheet.java b/src/com/android/launcher3/widget/picker/WidgetsFullSheet.java
+index a4b605cccd..f9d01cd7f4 100644
+--- a/src/com/android/launcher3/widget/picker/WidgetsFullSheet.java
++++ b/src/com/android/launcher3/widget/picker/WidgetsFullSheet.java
+@@ -310,7 +310,7 @@ public class WidgetsFullSheet extends BaseWidgetSheet
+         if (adapterHolder.mAdapterType == AdapterHolder.SEARCH) {
+             mNoWidgetsView.setText(R.string.no_search_results);
+         } else if (adapterHolder.mAdapterType == AdapterHolder.WORK
+-                && mUserManagerState.isAnyProfileQuietModeEnabled()
++                && mUserManagerState.isAllProfilesQuietModeEnabled()
+                 && mActivityContext.getStringCache() != null) {
+             mNoWidgetsView.setText(mActivityContext.getStringCache().workProfilePausedTitle);
+         } else {
+-- 
+2.45.2
+

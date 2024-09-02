@@ -1,0 +1,99 @@
+From 0f858f04329d4e04a5b2e915755767bcf0dd3a72 Mon Sep 17 00:00:00 2001
+From: Col_or <color597@outlook.com>
+Date: Mon, 12 Dec 2022 16:41:29 +0800
+Subject: [PATCH 04/21] SystemUI: QSTile: Drop some tiles' state text
+
+* Drop the secondary labels
+
+    Also squashed with:
+        SystemUI: Drop state subtitle for QS tiles
+
+        Change-Id: Icb01a69029179100738ebae5faa179c6ab4df132
+        Signed-off-by: Col_or <color597@outlook.com>
+
+Signed-off-by: Col_or <color597@outlook.com>
+Change-Id: I4b8b4f3aad560b41bd506b8fa86b145f88055e7e
+---
+ .../src/com/android/systemui/qs/tiles/AlarmTile.kt | 14 +-------------
+ .../systemui/qs/tiles/ScreenRecordTile.java        | 13 +------------
+ .../systemui/qs/tiles/SensorPrivacyToggleTile.java |  5 -----
+ 3 files changed, 2 insertions(+), 30 deletions(-)
+
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/AlarmTile.kt b/packages/SystemUI/src/com/android/systemui/qs/tiles/AlarmTile.kt
+index c709969ec6e2..38fe5fa3efb3 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/AlarmTile.kt
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/AlarmTile.kt
+@@ -91,29 +91,17 @@ class AlarmTile @Inject constructor(
+         state.icon = icon
+         state.label = tileLabel
+         lastAlarmInfo?.let {
+-            state.secondaryLabel = formatNextAlarm(it)
+             state.state = Tile.STATE_ACTIVE
+         } ?: run {
+-            state.secondaryLabel = mContext.getString(R.string.qs_alarm_tile_no_alarm)
+             state.state = Tile.STATE_INACTIVE
+         }
+-        state.contentDescription = TextUtils.concat(state.label, ", ", state.secondaryLabel)
++        state.contentDescription = state.label
+     }
+ 
+     override fun getTileLabel(): CharSequence {
+         return mContext.getString(R.string.status_bar_alarm)
+     }
+ 
+-    private fun formatNextAlarm(info: AlarmClockInfo): String {
+-        val skeleton = if (use24HourFormat()) "EHm" else "Ehma"
+-        val pattern = DateFormat.getBestDateTimePattern(Locale.getDefault(), skeleton)
+-        return DateFormat.format(pattern, info.triggerTime).toString()
+-    }
+-
+-    private fun use24HourFormat(): Boolean {
+-        return DateFormat.is24HourFormat(mContext, userTracker.userId)
+-    }
+-
+     override fun getMetricsCategory(): Int {
+         return 0
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/ScreenRecordTile.java b/packages/SystemUI/src/com/android/systemui/qs/tiles/ScreenRecordTile.java
+index 2d4652db6b80..928dd8357a9b 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/ScreenRecordTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/ScreenRecordTile.java
+@@ -135,18 +135,7 @@ public class ScreenRecordTile extends QSTileImpl<QSTile.BooleanState>
+         // Show expand icon when clicking will open a dialog
+         state.forceExpandIcon = state.state == Tile.STATE_INACTIVE;
+ 
+-        if (isRecording) {
+-            state.secondaryLabel = mContext.getString(R.string.quick_settings_screen_record_stop);
+-        } else if (isStarting) {
+-            // round, since the timer isn't exact
+-            int countdown = (int) Math.floorDiv(mMillisUntilFinished + 500, 1000);
+-            state.secondaryLabel = String.format("%d...", countdown);
+-        } else {
+-            state.secondaryLabel = mContext.getString(R.string.quick_settings_screen_record_start);
+-        }
+-        state.contentDescription = TextUtils.isEmpty(state.secondaryLabel)
+-                ? state.label
+-                : TextUtils.concat(state.label, ", ", state.secondaryLabel);
++        state.contentDescription = state.label;
+         state.expandedAccessibilityClassName = Switch.class.getName();
+     }
+ 
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/tiles/SensorPrivacyToggleTile.java b/packages/SystemUI/src/com/android/systemui/qs/tiles/SensorPrivacyToggleTile.java
+index 7c4f097a1724..c60d2bed525e 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/tiles/SensorPrivacyToggleTile.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/tiles/SensorPrivacyToggleTile.java
+@@ -117,11 +117,6 @@ public abstract class SensorPrivacyToggleTile extends QSTileImpl<QSTile.BooleanS
+         state.state = isBlocked ? Tile.STATE_INACTIVE : Tile.STATE_ACTIVE;
+         state.value = !isBlocked;
+         state.label = getTileLabel();
+-        if (isBlocked) {
+-            state.secondaryLabel = mContext.getString(R.string.quick_settings_camera_mic_blocked);
+-        } else {
+-            state.secondaryLabel = mContext.getString(R.string.quick_settings_camera_mic_available);
+-        }
+         state.contentDescription = state.label;
+         state.expandedAccessibilityClassName = Switch.class.getName();
+     }
+-- 
+2.45.2
+

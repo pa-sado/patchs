@@ -1,0 +1,134 @@
+From a609c7045562003549190e0689034808f2f01513 Mon Sep 17 00:00:00 2001
+From: ReallySnow <reallysnow233@gmail.com>
+Date: Thu, 4 Aug 2022 21:17:44 +0800
+Subject: [PATCH 03/21] SystemUI: Show 5 icons on QuickQS Panel
+
+Co-authored-by: Col_or <color597@outlook.com>
+Change-Id: Ib90ccbe96264a97c8aa00e6986bc502b62cb0a07
+---
+ packages/SystemUI/res/values/aospa_config.xml         |  4 ++++
+ .../src/com/android/systemui/qs/QuickQSPanel.java     | 11 ++++++++---
+ .../android/systemui/qs/QuickQSPanelController.java   |  5 +++--
+ .../src/com/android/systemui/qs/TileLayout.java       |  5 +++--
+ 4 files changed, 18 insertions(+), 7 deletions(-)
+
+diff --git a/packages/SystemUI/res/values/aospa_config.xml b/packages/SystemUI/res/values/aospa_config.xml
+index 29a64295270e..e8368a4bba47 100644
+--- a/packages/SystemUI/res/values/aospa_config.xml
++++ b/packages/SystemUI/res/values/aospa_config.xml
+@@ -29,4 +29,8 @@
+     <!-- Interval between subsequent shifting of statusbar and navbar contents, in seconds -->
+     <integer name="config_statusBarBurnInProtectionShiftInterval">60</integer>
+ 
++    <!--The number of columns in QuickQSPanel -->
++    <integer name="mia_quick_qs_panel_max_tiles">5</integer>
++    <integer name="mia_quick_qs_panel_max_columns">5</integer>
++
+ </resources>
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java
+index 118e7bf1741b..6cd8c86936f4 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanel.java
+@@ -31,7 +31,6 @@ import com.android.systemui.R;
+ import com.android.systemui.plugins.qs.QSTile;
+ import com.android.systemui.plugins.qs.QSTile.SignalState;
+ import com.android.systemui.plugins.qs.QSTile.State;
+-import com.android.systemui.tuner.TunerService;
+ 
+ /**
+  * Version of QSPanel that only shows N Quick Tiles in the QS Header.
+@@ -46,10 +45,12 @@ public class QuickQSPanel extends QSPanel {
+ 
+     private boolean mDisabledByPolicy;
+     private int mMaxTiles;
++    private int mMaxColumns;
+ 
+     public QuickQSPanel(Context context, AttributeSet attrs) {
+         super(context, attrs);
+-        mMaxTiles = getResources().getInteger(R.integer.quick_qs_panel_max_tiles);
++        mMaxTiles = getResources().getInteger(R.integer.mia_quick_qs_panel_max_tiles);
++        mMaxColumns = getResources().getInteger(R.integer.mia_quick_qs_panel_max_columns);
+     }
+ 
+     @Override
+@@ -122,6 +123,10 @@ public class QuickQSPanel extends QSPanel {
+         super.drawTile(r, state);
+     }
+ 
++    public void updateColumns() {
++        mTileLayout.setMaxColumns(mMaxColumns);
++    }
++
+     public void setMaxTiles(int maxTiles) {
+         mMaxTiles = maxTiles;
+     }
+@@ -211,7 +216,7 @@ public class QuickQSPanel extends QSPanel {
+             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.MATCH_PARENT,
+                     LayoutParams.WRAP_CONTENT);
+             setLayoutParams(lp);
+-            setMaxColumns(4);
++            setMaxColumns(5);
+         }
+ 
+         @Override
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java
+index 89e86503a170..ae24fab5fbe7 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/QuickQSPanelController.java
+@@ -115,6 +115,7 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+         if (mView.isListening()) {
+             refreshAllTiles();
+         }
++        mView.updateColumns();
+         mBrightnessMirrorHandler.onQsPanelAttached();
+     }
+ 
+@@ -122,7 +123,6 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+     protected void onViewDetached() {
+         super.onViewDetached();
+         mTunerService.removeTunable(mView);
+-        mView.removeOnConfigurationChangedListener(mOnConfigurationChangedListener);
+         mBrightnessMirrorHandler.onQsPanelDettached();
+     }
+ 
+@@ -147,12 +147,13 @@ public class QuickQSPanelController extends QSPanelControllerBase<QuickQSPanel>
+ 
+     private void setMaxTiles(int parseNumTiles) {
+         mView.setMaxTiles(parseNumTiles);
++        mView.updateColumns();
+         setTiles();
+     }
+ 
+     @Override
+     protected void onConfigurationChanged() {
+-        int newMaxTiles = getResources().getInteger(R.integer.quick_qs_panel_max_tiles);
++        int newMaxTiles = getResources().getInteger(R.integer.mia_quick_qs_panel_max_tiles);
+         if (newMaxTiles != mView.getNumQuickTiles()) {
+             setMaxTiles(newMaxTiles);
+         }
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/TileLayout.java b/packages/SystemUI/src/com/android/systemui/qs/TileLayout.java
+index 03b06fa4e172..c3e797bc15f1 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/TileLayout.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/TileLayout.java
+@@ -127,7 +127,8 @@ public class TileLayout extends ViewGroup implements QSTileLayout {
+ 
+     public boolean updateResources() {
+         Resources res = getResources();
+-        mResourceColumns = Math.max(1, res.getInteger(R.integer.quick_settings_num_columns));
++        mResourceColumns = Math.max(1, res.getInteger(R.integer.mia_quick_qs_panel_max_tiles));
++        updateColumns();
+         mResourceCellHeight = res.getDimensionPixelSize(mResourceCellHeightResId);
+         mCellMarginHorizontal = res.getDimensionPixelSize(R.dimen.qs_tile_margin_horizontal);
+         mSidePadding = useSidePadding() ? mCellMarginHorizontal / 2 : 0;
+@@ -150,7 +151,7 @@ public class TileLayout extends ViewGroup implements QSTileLayout {
+         return true;
+     }
+ 
+-    private boolean updateColumns() {
++    public boolean updateColumns() {
+         int oldColumns = mColumns;
+         mColumns = Math.min(mResourceColumns, mMaxColumns);
+         return oldColumns != mColumns;
+-- 
+2.45.2
+

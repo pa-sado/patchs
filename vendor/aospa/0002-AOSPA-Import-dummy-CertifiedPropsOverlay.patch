@@ -1,0 +1,96 @@
+From 54bc70d76e29e2754a0db99c7841961ea7cfc34c Mon Sep 17 00:00:00 2001
+From: WilliamSado <williamsado1004@gmail.com>
+Date: Mon, 2 Sep 2024 22:22:51 +0800
+Subject: [PATCH 2/2] AOSPA: Import dummy CertifiedPropsOverlay
+
+Change-Id: I937eb7a5d3c3b631e2b4268c103ab7117451fa63
+---
+ overlay/AOSPACertifiedRes/Android.bp          | 11 ++++++++++
+ overlay/AOSPACertifiedRes/AndroidManifest.xml | 13 ++++++++++++
+ .../AOSPACertifiedRes/res/values/config.xml   | 20 +++++++++++++++++++
+ overlay/overlays.mk                           |  1 +
+ 4 files changed, 45 insertions(+)
+ create mode 100644 overlay/AOSPACertifiedRes/Android.bp
+ create mode 100644 overlay/AOSPACertifiedRes/AndroidManifest.xml
+ create mode 100644 overlay/AOSPACertifiedRes/res/values/config.xml
+
+diff --git a/overlay/AOSPACertifiedRes/Android.bp b/overlay/AOSPACertifiedRes/Android.bp
+new file mode 100644
+index 0000000..9d2247f
+--- /dev/null
++++ b/overlay/AOSPACertifiedRes/Android.bp
+@@ -0,0 +1,11 @@
++//
++// Copyright (C) 2023 Paranoid Android
++// Copyright (C) 2024 Hadad <hadad@linuxmail.org>
++//
++// SPDX-License-Identifier: Apache-2.0
++//
++
++runtime_resource_overlay {
++    name: "AOSPACertifiedRes",
++    product_specific: true,
++}
+\ No newline at end of file
+diff --git a/overlay/AOSPACertifiedRes/AndroidManifest.xml b/overlay/AOSPACertifiedRes/AndroidManifest.xml
+new file mode 100644
+index 0000000..c55f63e
+--- /dev/null
++++ b/overlay/AOSPACertifiedRes/AndroidManifest.xml
+@@ -0,0 +1,13 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2023 Paranoid Android
++     Copyright (C) 2024 Hadad <hadad@linuxmail.org>
++     SPDX-License-Identifier: Apache-2.0
++-->
++<manifest xmlns:android="http://schemas.android.com/apk/res/android"
++    package="android.aospa.overlay.certified">
++    <application android:hasCode="false"/>
++    <overlay android:targetPackage="android"
++             android:isStatic="true"
++             android:priority="1000" />
++</manifest>
+\ No newline at end of file
+diff --git a/overlay/AOSPACertifiedRes/res/values/config.xml b/overlay/AOSPACertifiedRes/res/values/config.xml
+new file mode 100644
+index 0000000..baf334b
+--- /dev/null
++++ b/overlay/AOSPACertifiedRes/res/values/config.xml
+@@ -0,0 +1,20 @@
++<?xml version="1.0" encoding="utf-8"?>
++<!--
++     Copyright (C) 2023 Paranoid Android
++     Copyright (C) 2024 Hadad <hadad@linuxmail.org>
++     SPDX-License-Identifier: Apache-2.0
++-->
++<resources>
++    <!-- Build properties from a GMS certified device against current platform SPL level -->
++    <string-array name="config_certifiedBuildProperties" translatable="false">
++        <item>google</item> <!-- Build.BRAND -->
++        <item>Google</item> <!-- Build.MANUFACTURER -->
++        <item></item> <!-- Build.ID -->
++        <item>akita_beta</item> <!-- Build.DEVICE -->
++        <item>akita_beta</item> <!-- Build.PRODUCT -->
++        <item>Pixel 8a</item> <!-- Build.MODEL -->
++        <item>google/akita_beta/akita:15/AP31.240617.015/12207491:user/release-keys</item> <!-- Build.FINGERPRINT -->
++        <item>user</item> <!-- Build.TYPE -->
++        <item>release-keys</item> <!-- Build.TAGS -->
++    </string-array>
++</resources>
+\ No newline at end of file
+diff --git a/overlay/overlays.mk b/overlay/overlays.mk
+index 567c584..2e58e14 100644
+--- a/overlay/overlays.mk
++++ b/overlay/overlays.mk
+@@ -15,6 +15,7 @@
+ # Overlays
+ PRODUCT_PACKAGES += \
+     AOSPABlackThemeOverlay \
++    AOSPACertifiedRes \
+     AOSPAFrameworksOverlay \
+     AOSPAImmersiveNavigationOverlay \
+     AOSPANetworkStackOverlay \
+-- 
+2.46.0
+

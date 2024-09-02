@@ -1,0 +1,28 @@
+From a48ab224ac3bf6bc4bdcf0210ec6ccdb4d608b35 Mon Sep 17 00:00:00 2001
+From: John Galt <johngaltfirstrun@gmail.com>
+Date: Wed, 3 Jan 2024 11:12:09 -0500
+Subject: [PATCH 3/3] Launcher3: Enable ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER
+ flag
+
+Change-Id: Ib0ce293d9071556481bd95cc7869aaad781a581b
+Signed-off-by: Jyotiraditya Panda <jyotiraditya@aospa.co>
+---
+ src/com/android/launcher3/config/FeatureFlags.java | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/src/com/android/launcher3/config/FeatureFlags.java b/src/com/android/launcher3/config/FeatureFlags.java
+index 530b41a06d..2674df7140 100644
+--- a/src/com/android/launcher3/config/FeatureFlags.java
++++ b/src/com/android/launcher3/config/FeatureFlags.java
+@@ -209,7 +209,7 @@ public final class FeatureFlags {
+ 
+     // TODO(Block 15): Clean up flags
+     public static final BooleanFlag ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER = getDebugFlag(266177840,
+-            "ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER", DISABLED,
++            "ENABLE_APP_CLONING_CHANGES_IN_LAUNCHER", ENABLED,
+             "Removes clone apps from the work profile tab.");
+ 
+     // TODO(Block 16): Clean up flags
+-- 
+2.45.2
+

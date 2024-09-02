@@ -1,0 +1,25 @@
+From fca300ee0535a989fa6883eabc0c8dfc6e8c1976 Mon Sep 17 00:00:00 2001
+From: ReallySnow <reallysnow233@gmail.com>
+Date: Mon, 10 Jul 2023 05:06:06 +0000
+Subject: [PATCH 08/21] SystemUI: Make brightness mirror transparent
+
+Change-Id: I60d3bb0f8cdb3d6500f3ead47030f9b5952ee4bf
+---
+ packages/SystemUI/res/drawable/brightness_mirror_background.xml | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/packages/SystemUI/res/drawable/brightness_mirror_background.xml b/packages/SystemUI/res/drawable/brightness_mirror_background.xml
+index b5c181bd896c..b69ed2c8b751 100644
+--- a/packages/SystemUI/res/drawable/brightness_mirror_background.xml
++++ b/packages/SystemUI/res/drawable/brightness_mirror_background.xml
+@@ -15,6 +15,6 @@
+   ~ limitations under the License
+   -->
+ <shape xmlns:android="http://schemas.android.com/apk/res/android">
+-    <solid android:color="?attr/underSurface" />
++    <solid android:color="@android:color/transparent" />
+     <corners android:radius="@dimen/rounded_slider_background_rounded_corner" />
+ </shape>
+-- 
+2.45.2
+

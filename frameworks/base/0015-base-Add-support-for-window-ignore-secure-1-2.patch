@@ -1,0 +1,66 @@
+From 50afb8a8f4eac883e92815c3b7cbd842d115c67d Mon Sep 17 00:00:00 2001
+From: LibXZR <i@xzr.moe>
+Date: Fri, 18 Mar 2022 10:12:37 +0800
+Subject: [PATCH 15/21] base: Add support for window ignore secure [1/2]
+
+Feature: yt/KSCOPE-23
+Change-Id: Ia9447ca17f6b24152b64526c25710a77e1388ce6
+Signed-off-by: LibXZR <i@xzr.moe>
+Signed-off-by: chrisl7 <wandersonrodriguesf1@gmail.com>
+---
+ core/java/android/provider/Settings.java | 7 +++++++
+ core/java/android/view/Window.java       | 6 ++++++
+ 2 files changed, 13 insertions(+)
+
+diff --git a/core/java/android/provider/Settings.java b/core/java/android/provider/Settings.java
+index af2467e3e60e..01e32fb471a9 100644
+--- a/core/java/android/provider/Settings.java
++++ b/core/java/android/provider/Settings.java
+@@ -12043,6 +12043,13 @@ public final class Settings {
+         public static final String EXTRA_AUTOMATIC_POWER_SAVE_MODE =
+                 "extra_automatic_power_save_mode";
+ 
++	/**
++         * Control whether FLAG_SECURE is ignored for all windows.
++         * @hide
++         */
++        @Readable
++        public static final String WINDOW_IGNORE_SECURE = "window_ignore_secure";
++
+         /**
+          * Whether lockscreen weather is enabled.
+          *
+diff --git a/core/java/android/view/Window.java b/core/java/android/view/Window.java
+index 2f04b0c695da..85055bffbf67 100644
+--- a/core/java/android/view/Window.java
++++ b/core/java/android/view/Window.java
+@@ -20,6 +20,7 @@ import static android.Manifest.permission.HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
+ import static android.Manifest.permission.HIDE_OVERLAY_WINDOWS;
+ import static android.content.pm.PackageManager.PERMISSION_GRANTED;
+ import static android.view.WindowManager.LayoutParams.FLAG_HARDWARE_ACCELERATED;
++import static android.view.WindowManager.LayoutParams.FLAG_SECURE;
+ import static android.view.WindowManager.LayoutParams.SYSTEM_FLAG_HIDE_NON_SYSTEM_OVERLAY_WINDOWS;
+ 
+ import android.annotation.ColorInt;
+@@ -50,6 +51,7 @@ import android.os.Build;
+ import android.os.Bundle;
+ import android.os.Handler;
+ import android.os.IBinder;
++import android.provider.Settings;
+ import android.transition.Scene;
+ import android.transition.Transition;
+ import android.transition.TransitionManager;
+@@ -1288,6 +1290,10 @@ public abstract class Window {
+      * @see #clearFlags
+      */
+     public void setFlags(int flags, int mask) {
++        if ((mask & FLAG_SECURE) != 0 && Settings.Secure.getInt(mContext.getContentResolver(),
++                Settings.Secure.WINDOW_IGNORE_SECURE, 0) == 1) {
++            mask &= ~FLAG_SECURE;
++        }
+         final WindowManager.LayoutParams attrs = getAttributes();
+         attrs.flags = (attrs.flags&~mask) | (flags&mask);
+         mForcedWindowFlags |= mask;
+-- 
+2.45.2
+

@@ -1,0 +1,31 @@
+From 39370f9c2db49d6a652e7bf6107368b7bf9c622f Mon Sep 17 00:00:00 2001
+From: Jyotiraditya Panda <jyotiraditya@aospa.co>
+Date: Tue, 20 Feb 2024 09:29:21 +0900
+Subject: [PATCH 19/21] core: appcloning: Enable app cloning building blocks by
+ default
+
+ * This bypasses the dependency on DeviceConfig by making it true always.
+   In future if we decide to disable the feature we can just switch the bool flag
+   {R.bool#config_enableAppCloningBuildingBlocks} to false.
+
+Change-Id: Iab03d4e0b43f6aa3cda68e4a824c1328ad098077
+Signed-off-by: Jyotiraditya Panda <jyotiraditya@aospa.co>
+---
+ .../config/appcloning/AppCloningDeviceConfigHelper.java         | 2 +-
+ 1 file changed, 1 insertion(+), 1 deletion(-)
+
+diff --git a/core/java/com/android/internal/config/appcloning/AppCloningDeviceConfigHelper.java b/core/java/com/android/internal/config/appcloning/AppCloningDeviceConfigHelper.java
+index ddd3d2cf3aed..f46d266c648c 100644
+--- a/core/java/com/android/internal/config/appcloning/AppCloningDeviceConfigHelper.java
++++ b/core/java/com/android/internal/config/appcloning/AppCloningDeviceConfigHelper.java
+@@ -102,6 +102,6 @@ public class AppCloningDeviceConfigHelper {
+      * @hide
+      */
+     public boolean getEnableAppCloningBuildingBlocks() {
+-        return mEnableAppCloningBuildingBlocks;
++        return true /* mEnableAppCloningBuildingBlocks */;
+     }
+ }
+-- 
+2.45.2
+

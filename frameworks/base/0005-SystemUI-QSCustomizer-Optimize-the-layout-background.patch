@@ -1,0 +1,165 @@
+From a5bdcb99fa0bbd33803a1d5e87e92f7ef3449926 Mon Sep 17 00:00:00 2001
+From: Col_or <color597@outlook.com>
+Date: Mon, 10 Jul 2023 19:01:53 +0000
+Subject: [PATCH 05/21] SystemUI: QSCustomizer: Optimize the layout, background
+ & padding
+
+* layout: Remove navigation bar space
+* background: Make it as same as qs panel background
+* padding: Padding the recycler view instead of it's parent layout,
+  and make a navigation bar bottom padding after remove the navigation
+  bar space
+
+Change-Id: I9666a359c7299a41dce226bb31d8b5529594d306
+---
+ .../res/drawable/qs_customize_tile_decoration.xml  |  4 +---
+ .../drawable/qs_customizer_background_primary.xml  |  8 ++------
+ .../res/layout/qs_customize_panel_content.xml      | 14 +++++---------
+ .../systemui/qs/customize/QSCustomizer.java        | 10 ----------
+ .../qs/customize/QSCustomizerController.java       |  5 -----
+ 5 files changed, 8 insertions(+), 33 deletions(-)
+
+diff --git a/packages/SystemUI/res/drawable/qs_customize_tile_decoration.xml b/packages/SystemUI/res/drawable/qs_customize_tile_decoration.xml
+index c069c6ba8bef..4c4353d96313 100644
+--- a/packages/SystemUI/res/drawable/qs_customize_tile_decoration.xml
++++ b/packages/SystemUI/res/drawable/qs_customize_tile_decoration.xml
+@@ -14,7 +14,5 @@
+      limitations under the License.
+ -->
+ <shape xmlns:android="http://schemas.android.com/apk/res/android">
+-    <solid android:color="?attr/underSurfaceVariant"/>
+-    <corners android:topLeftRadius="20dp"
+-             android:topRightRadius="20dp" />
++    <solid android:color="@android:color/transparent"/>
+ </shape>
+diff --git a/packages/SystemUI/res/drawable/qs_customizer_background_primary.xml b/packages/SystemUI/res/drawable/qs_customizer_background_primary.xml
+index e138d094f869..afe3ab6a2ab9 100644
+--- a/packages/SystemUI/res/drawable/qs_customizer_background_primary.xml
++++ b/packages/SystemUI/res/drawable/qs_customizer_background_primary.xml
+@@ -1,12 +1,9 @@
+ <?xml version="1.0" encoding="utf-8"?>
+ <!-- Copyright (C) 2014 The Android Open Source Project
+-
+      Licensed under the Apache License, Version 2.0 (the "License");
+      you may not use this file except in compliance with the License.
+      You may obtain a copy of the License at
+-
+           http://www.apache.org/licenses/LICENSE-2.0
+-
+      Unless required by applicable law or agreed to in writing, software
+      distributed under the License is distributed on an "AS IS" BASIS,
+      WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+@@ -15,7 +12,6 @@
+ -->
+ <inset xmlns:android="http://schemas.android.com/apk/res/android">
+     <shape>
+-        <solid android:color="?attr/underSurface"/>
+-        <corners android:radius="?android:attr/dialogCornerRadius" />
++        <solid android:color="@android:color/transparent"/>
+     </shape>
+-</inset>
++</inset>
+\ No newline at end of file
+diff --git a/packages/SystemUI/res/layout/qs_customize_panel_content.xml b/packages/SystemUI/res/layout/qs_customize_panel_content.xml
+index 53af93295189..8d8aabd51d58 100644
+--- a/packages/SystemUI/res/layout/qs_customize_panel_content.xml
++++ b/packages/SystemUI/res/layout/qs_customize_panel_content.xml
+@@ -28,26 +28,23 @@
+         android:layout_height="0dp"
+         android:layout_weight="1"
+         android:orientation="vertical"
+-        android:paddingStart="@dimen/qs_customize_internal_side_paddings"
+-        android:paddingEnd="@dimen/qs_customize_internal_side_paddings"
+         android:background="@drawable/qs_customizer_background">
++
+         <Toolbar
+             android:id="@*android:id/action_bar"
+             android:layout_width="match_parent"
+             android:layout_height="wrap_content"
+-            android:background="@drawable/qs_customizer_toolbar"
++            android:layout_marginHorizontal="@dimen/qs_customize_internal_side_paddings"
+             android:navigationContentDescription="@*android:string/action_bar_up_description"
+-            style="@style/QSCustomizeToolbar"
+-            />
++            style="@style/QSCustomizeToolbar" />
+ 
+         <androidx.recyclerview.widget.RecyclerView
+             android:id="@android:id/list"
+             android:layout_width="match_parent"
+             android:layout_height="0dp"
+             android:layout_weight="1"
+-            android:paddingStart="@dimen/qs_customize_internal_side_paddings"
+-            android:paddingEnd="@dimen/qs_customize_internal_side_paddings"
+-            android:paddingBottom="28dp"
++            android:paddingHorizontal="16dp"
++            android:paddingBottom="@dimen/navigation_bar_size"
+             android:clipChildren="false"
+             android:clipToPadding="false"
+             android:scrollIndicators="top"
+@@ -55,5 +52,4 @@
+             android:scrollbarStyle="outsideOverlay"
+             android:importantForAccessibility="auto" />
+     </com.android.keyguard.AlphaOptimizedLinearLayout>
+-
+ </merge>
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizer.java b/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizer.java
+index 4e32ab5afdbf..a2098816f7ca 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizer.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizer.java
+@@ -103,16 +103,6 @@ public class QSCustomizer extends LinearLayout {
+         mRecyclerView.getAdapter().notifyItemChanged(0);
+     }
+ 
+-    void updateNavBackDrop(Configuration newConfig, LightBarController lightBarController) {
+-        mIsShowingNavBackdrop = newConfig.smallestScreenWidthDp >= 600
+-                || newConfig.orientation != Configuration.ORIENTATION_LANDSCAPE;
+-        updateNavColors(lightBarController);
+-    }
+-
+-    void updateNavColors(LightBarController lightBarController) {
+-        lightBarController.setQsCustomizing(mIsShowingNavBackdrop && isShown);
+-    }
+-
+     public void setContainerController(QSContainerController controller) {
+         mQsContainerController = controller;
+     }
+diff --git a/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizerController.java b/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizerController.java
+index 4002ac3aa120..12784e91c62a 100644
+--- a/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizerController.java
++++ b/packages/SystemUI/src/com/android/systemui/qs/customize/QSCustomizerController.java
+@@ -91,7 +91,6 @@ public class QSCustomizerController extends ViewController<QSCustomizer> {
+     private final ConfigurationListener mConfigurationListener = new ConfigurationListener() {
+         @Override
+         public void onConfigChanged(Configuration newConfig) {
+-            mView.updateNavBackDrop(newConfig, mLightBarController);
+             mView.updateResources();
+             if (mTileAdapter.updateNumColumns()) {
+                 RecyclerView.LayoutManager lm = mView.getRecyclerView().getLayoutManager();
+@@ -123,8 +122,6 @@ public class QSCustomizerController extends ViewController<QSCustomizer> {
+ 
+     @Override
+     protected void onViewAttached() {
+-        mView.updateNavBackDrop(getResources().getConfiguration(), mLightBarController);
+-
+         mConfigurationController.addCallback(mConfigurationListener);
+ 
+         mTileQueryHelper.setListener(mTileAdapter);
+@@ -194,7 +191,6 @@ public class QSCustomizerController extends ViewController<QSCustomizer> {
+             }
+             mTileQueryHelper.queryTiles(mQsHost);
+             mKeyguardStateController.addCallback(mKeyguardCallback);
+-            mView.updateNavColors(mLightBarController);
+         }
+     }
+ 
+@@ -251,7 +247,6 @@ public class QSCustomizerController extends ViewController<QSCustomizer> {
+             mView.setCustomizing(false);
+             save();
+             mView.hide(animate);
+-            mView.updateNavColors(mLightBarController);
+             mKeyguardStateController.removeCallback(mKeyguardCallback);
+         }
+     }
+-- 
+2.45.2
+
